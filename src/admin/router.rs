@@ -119,10 +119,10 @@ async fn applications_handler(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
-async fn applications_scopes_handler(State(state): State<AppState>) -> Result<impl IntoResponse, StatusCode> {
+async fn applications_scopes_handler(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     Ok(StatusCode::CREATED)
 }
 
-async fn metrics_handler(State(state): State<AppState>) -> Result<impl IntoResponse, StatusCode> {
+async fn metrics_handler(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     Ok(StatusCode::CREATED)
 }
