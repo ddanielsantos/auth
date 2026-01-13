@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::auth::jwt;
 use crate::crypto;
 use crate::error::AppError;
-use crate::uuid::parse_uuid;
+use crate::id::parse_uuid;
 
 #[derive(Debug, Deserialize)]
 struct LoginRequestBody {

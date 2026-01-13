@@ -9,7 +9,7 @@ mod config;
 mod crypto;
 mod router;
 mod users;
-mod uuid;
+mod id;
 mod error;
 
 #[tokio::main]

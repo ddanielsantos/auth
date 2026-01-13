@@ -9,7 +9,7 @@ use axum::{middleware, Json, Router};
 use serde::{Deserialize, Serialize};
 use tracing::{info};
 use crate::crypto;
-use crate::uuid;
+use crate::id;
 use crate::error::AppError;
 
 async fn validate_admin_api_key(request: Request, next: Next) -> Result<Response, StatusCode> {
@@ -37,7 +37,7 @@ async fn organizations_handler(
     State(state): State<AppState>,
     Json(body): Json<OrganizationsRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let org_id = uuid::new_uuid();
+    let org_id = id::new_uuid();
     let project_id = sqlx::query_scalar!(
         "INSERT INTO organizations (name, id) VALUES ($1, $2) RETURNING id",
         body.name,
@@ -60,10 +60,10 @@ async fn projects_handler(
     State(state): State<AppState>,
     Json(body): Json<ProjectsRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let org_id = uuid::parse_uuid(&body.org_id)?;
+    let org_id = id::parse_uuid(&body.org_id)?;
     let project_id = sqlx::query_scalar!(
         "INSERT INTO projects (id, org_id, name, shared_identity_context) VALUES ($1, $2, $3, $4) RETURNING id",
-        uuid::new_uuid(),
+        id::new_uuid(),
         org_id,
         body.name,
         body.shared_identity_context.unwrap_or(false)
@@ -94,9 +94,9 @@ async fn applications_handler(
         return Err(AppError::ValidationError("redirect_uris".to_string()));
     }
 
-    let project_id = uuid::parse_uuid(&body.project_id)?;
-    let client_id = uuid::new_uuid();
-    let application_id = uuid::new_uuid();
+    let project_id = id::parse_uuid(&body.project_id)?;
+    let client_id = id::new_uuid();
+    let application_id = id::new_uuid();
     let raw_client_secret = crypto::generate_client_secret();
     let client_secret_hash = crypto::hash_password(&raw_client_secret)?;
 
