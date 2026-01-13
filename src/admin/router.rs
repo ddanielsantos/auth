@@ -1,5 +1,5 @@
 use crate::router::AppState;
-use axum::extract::{Request, State};
+use axum::extract::{Query, Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -119,7 +119,61 @@ async fn applications_handler(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
-async fn applications_scopes_handler(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+#[derive(Deserialize)]
+struct ApplicationScopesParams {
+    app_id: String,
+}
+
+#[derive(Deserialize)]
+struct ApplicationScope {
+    name: String,
+    description: String,
+}
+
+#[derive(Deserialize)]
+struct ApplicationScopesRequestBody {
+    application_scopes: Vec<ApplicationScope>,
+}
+
+async fn applications_scopes_handler(Query(params): Query<ApplicationScopesParams>, State(state): State<AppState>, Json(body): Json<ApplicationScopesRequestBody>) -> Result<impl IntoResponse, AppError> {
+    if params.app_id.is_empty() {
+        return Err(AppError::ValidationError("app_id".to_string()));
+    }
+
+    if body.application_scopes.is_empty()
+        || body.application_scopes.iter().any(|application_scope: &ApplicationScope| { application_scope.description.is_empty() || application_scope.name.is_empty() }) {
+        return Err(AppError::ValidationError("application_scopes".to_string()));
+    }
+
+    let app_id = id::parse_uuid(&params.app_id)?;
+
+    let mut permission_ids = Vec::with_capacity(body.application_scopes.len());
+    let mut names = Vec::with_capacity(body.application_scopes.len());
+    let mut descriptions = Vec::with_capacity(body.application_scopes.len());
+
+    for scope in &body.application_scopes {
+        permission_ids.push(id::new_uuid());
+        names.push(scope.name.clone());
+        descriptions.push(scope.description.clone());
+    }
+
+    sqlx::query!(
+        r#"
+            INSERT INTO permissions (id, app_id, name, description)
+            SELECT ids, $2, names, description
+            FROM UNNEST($1::uuid[], $3::text[], $4::text[])
+            AS t(ids, names, description)
+            ON CONFLICT (app_id, name)
+            DO UPDATE SET description = EXCLUDED.description
+        "#,
+        &permission_ids,
+        app_id,
+        &names,
+        &descriptions
+    )
+        .execute(&state.pool)
+        .await?;
+
     Ok(StatusCode::CREATED)
 }
 
