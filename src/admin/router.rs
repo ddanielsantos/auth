@@ -69,7 +69,7 @@ async fn projects_handler(
         body.name,
         body.shared_identity_context.unwrap_or(false)
     )
-    .fetch_one(&state.pool)
+    .execute(&state.pool)
     .await?;
 
     Ok((StatusCode::CREATED, project_id.to_string()).into_response())
