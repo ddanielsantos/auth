@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO permissions (id, app_id, name, description)\n            SELECT ids, $2, names, description\n            FROM UNNEST($1::uuid[], $3::text[], $4::text[])\n            AS t(ids, names, description)\n            ON CONFLICT (app_id, name)\n            DO UPDATE SET description = EXCLUDED.description\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "55f9c802e529874ff5f0e6551da4e511e7901035aa15db41f0694f4868dae0cc"
+}

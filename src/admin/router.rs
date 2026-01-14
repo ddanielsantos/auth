@@ -38,7 +38,7 @@ async fn organizations_handler(
     Json(body): Json<OrganizationsRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
     let org_id = id::new_uuid();
-    let project_id = sqlx::query_scalar!(
+    sqlx::query!(
         "INSERT INTO organizations (name, id) VALUES ($1, $2) RETURNING id",
         body.name,
         org_id
@@ -46,7 +46,7 @@ async fn organizations_handler(
     .fetch_one(&state.pool)
     .await?;
 
-    Ok((StatusCode::CREATED, project_id.to_string()).into_response())
+    Ok((StatusCode::CREATED, org_id.to_string()).into_response())
 }
 
 #[derive(Deserialize)]
@@ -61,9 +61,10 @@ async fn projects_handler(
     Json(body): Json<ProjectsRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
     let org_id = id::parse_uuid(&body.org_id)?;
-    let project_id = sqlx::query_scalar!(
-        "INSERT INTO projects (id, org_id, name, shared_identity_context) VALUES ($1, $2, $3, $4) RETURNING id",
-        id::new_uuid(),
+    let project_id = id::new_uuid();
+    sqlx::query!(
+        "INSERT INTO projects (id, org_id, name, shared_identity_context) VALUES ($1, $2, $3, $4)",
+        project_id,
         org_id,
         body.name,
         body.shared_identity_context.unwrap_or(false)

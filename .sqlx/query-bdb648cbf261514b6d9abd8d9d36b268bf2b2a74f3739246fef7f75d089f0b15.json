@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO applications (id, project_id, client_id, client_secret_hash, redirect_uris) VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bdb648cbf261514b6d9abd8d9d36b268bf2b2a74f3739246fef7f75d089f0b15"
+}

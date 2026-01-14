@@ -6,7 +6,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use crate::auth::jwt;
-use crate::crypto;
+use crate::{crypto, id};
 use crate::error::AppError;
 use crate::id::parse_uuid;
 
@@ -37,13 +37,14 @@ async fn register_handler(
     Json(body): Json<RegisterRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
     let client_id = parse_uuid(&body.client_id)?;
+    let identity_id = id::new_uuid();
     let mut tx = state
         .pool
         .begin()
         .await?;
 
-    let identity_id = sqlx::query_scalar!("INSERT INTO identities DEFAULT VALUES RETURNING id")
-        .fetch_one(&mut *tx)
+    sqlx::query!("INSERT INTO identities (id) VALUES ($1)", identity_id)
+        .execute(&mut *tx)
         .await?;
 
     let hash = crypto::hash_password(&body.password)?;
