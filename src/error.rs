@@ -1,7 +1,6 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use tracing::error;
-use tracing::log::warn;
 
 pub enum AppError {
     Argon2(argon2::password_hash::Error),
@@ -20,20 +19,11 @@ impl IntoResponse for AppError {
                 error!("Error hashing password: {}", err);
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
-            AppError::Uuid(err) => {
-                warn!("UUID error: {}", err);
-                StatusCode::BAD_REQUEST.into_response()
-            }
+            AppError::Uuid(err) => (StatusCode::BAD_REQUEST, format!("UUID error: {}", err)).into_response(),
             AppError::Sqlx(ref err) => self.handle_sqlx_error(err).into_response(),
-            AppError::InvalidUUIDVersion => {
-                (StatusCode::BAD_REQUEST, "Invalid UUID version").into_response()
-            }
-            AppError::HeaderNotFound => {
-                StatusCode::BAD_REQUEST.into_response()
-            }
-            AppError::InvalidToken => {
-                StatusCode::UNAUTHORIZED.into_response()
-            }
+            AppError::InvalidUUIDVersion => (StatusCode::BAD_REQUEST, "Invalid UUID version").into_response(),
+            AppError::HeaderNotFound => StatusCode::BAD_REQUEST.into_response(),
+            AppError::InvalidToken => StatusCode::UNAUTHORIZED.into_response(),
             AppError::ValidationError(field) => {
                 (StatusCode::BAD_REQUEST, format!("Validation failed for {}", field)).into_response()
             }

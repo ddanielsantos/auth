@@ -1,8 +1,8 @@
+use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
-use argon2::password_hash::{SaltString};
 use argon2::{Argon2, PasswordHasher};
-use rand::distr::Alphanumeric;
 use rand::Rng;
+use rand::distr::Alphanumeric;
 
 pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
     let salt = SaltString::generate(&mut OsRng);

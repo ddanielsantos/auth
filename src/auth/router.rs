@@ -1,13 +1,13 @@
+use crate::auth::jwt;
+use crate::error::AppError;
 use crate::router::AppState;
+use crate::{crypto, id};
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use crate::auth::jwt;
-use crate::{crypto, id};
-use crate::error::AppError;
 
 #[derive(Debug, Deserialize)]
 struct LoginRequestBody {
@@ -37,10 +37,7 @@ async fn register_handler(
 ) -> Result<impl IntoResponse, AppError> {
     let client_id = id::parse_uuid(&body.client_id)?;
     let identity_id = id::new_uuid();
-    let mut tx = state
-        .pool
-        .begin()
-        .await?;
+    let mut tx = state.pool.begin().await?;
 
     sqlx::query!("INSERT INTO identities (id) VALUES ($1)", identity_id)
         .execute(&mut *tx)
@@ -57,13 +54,9 @@ async fn register_handler(
     .execute(&mut *tx)
     .await?;
 
-
-    let project_id = sqlx::query_scalar!(
-        "SELECT project_id FROM applications WHERE client_id = $1",
-        client_id
-    )
-    .fetch_one(&mut *tx)
-    .await?;
+    let project_id = sqlx::query_scalar!("SELECT project_id FROM applications WHERE client_id = $1", client_id)
+        .fetch_one(&mut *tx)
+        .await?;
 
     sqlx::query!(
         "INSERT INTO user_accounts (identity_id, project_id, local_profile_data) VALUES ($1, $2, $3)",
@@ -117,4 +110,4 @@ async fn me_handler(header: HeaderMap, State(state): State<AppState>) -> Result<
     }))
 }
 
-async fn login_handler(Json(body): Json<LoginRequestBody>) -> impl IntoResponse {}
+async fn login_handler(Json(_body): Json<LoginRequestBody>) -> impl IntoResponse {}

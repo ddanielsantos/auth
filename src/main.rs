@@ -7,10 +7,10 @@ mod admin;
 mod auth;
 mod config;
 mod crypto;
+mod error;
+mod id;
 mod router;
 mod users;
-mod id;
-mod error;
 
 #[tokio::main]
 async fn main() {
@@ -27,10 +27,7 @@ async fn main() {
     let state = AppState::new(pool);
     let trace_layer = config::tracing::get_trace_layer();
     let cors_layer = config::net::get_cors_layer();
-    let app_router = router::routes()
-        .with_state(state)
-        .layer(trace_layer)
-        .layer(cors_layer);
+    let app_router = router::routes().with_state(state).layer(trace_layer).layer(cors_layer);
 
     let address = Ipv4Addr::UNSPECIFIED;
     let port = 3000;

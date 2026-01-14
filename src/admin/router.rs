@@ -4,13 +4,13 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
-use axum::{middleware, Json, Router};
+use axum::{Json, Router, middleware};
 
-use serde::{Deserialize, Serialize};
-use tracing::{info};
 use crate::crypto;
-use crate::id;
 use crate::error::AppError;
+use crate::id;
+use serde::{Deserialize, Serialize};
+use tracing::info;
 
 async fn validate_admin_api_key(request: Request, next: Next) -> Result<Response, StatusCode> {
     info!("Validating admin API key");
@@ -138,12 +138,20 @@ struct ApplicationScopesRequestBody {
 
 #[axum::debug_handler]
 async fn applications_scopes_handler(
-    Path(app_id): Path<uuid::Uuid>,
+    Path(app_id): Path<String>,
     State(state): State<AppState>,
-    Json(body): Json<ApplicationScopesRequestBody>
+    Json(body): Json<ApplicationScopesRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
+    let app_id = id::parse_uuid(&app_id)?;
+
     if body.application_scopes.is_empty()
-        || body.application_scopes.iter().any(|application_scope: &ApplicationScope| { application_scope.description.is_empty() || application_scope.name.is_empty() }) {
+        || body
+            .application_scopes
+            .iter()
+            .any(|application_scope: &ApplicationScope| {
+                application_scope.description.is_empty() || application_scope.name.is_empty()
+            })
+    {
         return Err(AppError::ValidationError("application_scopes".to_string()));
     }
 
@@ -172,12 +180,12 @@ async fn applications_scopes_handler(
         &names,
         &descriptions
     )
-        .execute(&state.pool)
-        .await?;
+    .execute(&state.pool)
+    .await?;
 
     Ok(StatusCode::CREATED)
 }
 
-async fn metrics_handler(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+async fn metrics_handler(State(_state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     Ok(StatusCode::CREATED)
 }
