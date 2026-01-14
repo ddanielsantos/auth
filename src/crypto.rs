@@ -1,7 +1,7 @@
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{SaltString};
 use argon2::{Argon2, PasswordHasher};
-use rand::distributions::Alphanumeric;
+use rand::distr::Alphanumeric;
 use rand::Rng;
 
 pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
@@ -14,7 +14,7 @@ pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Er
 }
 
 pub fn generate_client_secret() -> String {
-    rand::thread_rng()
+    rand::rng()
         .sample_iter(&Alphanumeric)
         .take(32)
         .map(char::from)

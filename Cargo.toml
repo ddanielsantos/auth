@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-axum = "0.8.7"
+axum = { version = "0.8.7", features = ["macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0.145" }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid"] }
@@ -16,5 +16,5 @@ argon2 = "0.5"
 rand_core = { version = "0.9.3", features = ["std", "os_rng"] }
 dotenvy = "0.15.7"
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
-uuid = { version = "1.19.0", features = ["v7"] }
-rand = "0.8.5"
+uuid = { version = "1.19.0", features = ["v7", "serde"] }
+rand = "0.9.2"
