@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use crate::auth::jwt;
 use crate::{crypto, id};
 use crate::error::AppError;
-use crate::id::parse_uuid;
 
 #[derive(Debug, Deserialize)]
 struct LoginRequestBody {
@@ -36,7 +35,7 @@ async fn register_handler(
     State(state): State<AppState>,
     Json(body): Json<RegisterRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client_id = parse_uuid(&body.client_id)?;
+    let client_id = id::parse_uuid(&body.client_id)?;
     let identity_id = id::new_uuid();
     let mut tx = state
         .pool
@@ -92,7 +91,7 @@ async fn me_handler(header: HeaderMap, State(state): State<AppState>) -> Result<
     let jwt = jwt::get_jwt_token(&header)?;
     let token = jwt::decode_token(jwt)?.claims.sub;
 
-    let user_id = parse_uuid(&token)?;
+    let user_id = id::parse_uuid(&token)?;
     let user_data = sqlx::query!(
         r#"
         SELECT
