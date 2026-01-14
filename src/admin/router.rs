@@ -1,5 +1,5 @@
 use crate::router::AppState;
-use axum::extract::{Query, Request, State};
+use axum::extract::{Path, Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -23,7 +23,7 @@ pub fn get_router() -> Router<AppState> {
         .route("/organizations", post(organizations_handler))
         .route("/projects", post(projects_handler))
         .route("/applications", post(applications_handler))
-        .route("/applications/{id}/scopes", put(applications_scopes_handler))
+        .route("/applications/{app_id}/scopes", put(applications_scopes_handler))
         .route("/metrics", get(metrics_handler))
         .layer(middleware::from_fn(validate_admin_api_key))
 }
@@ -136,21 +136,21 @@ struct ApplicationScopesRequestBody {
     application_scopes: Vec<ApplicationScope>,
 }
 
-async fn applications_scopes_handler(Query(params): Query<ApplicationScopesParams>, State(state): State<AppState>, Json(body): Json<ApplicationScopesRequestBody>) -> Result<impl IntoResponse, AppError> {
-    if params.app_id.is_empty() {
-        return Err(AppError::ValidationError("app_id".to_string()));
-    }
-
+#[axum::debug_handler]
+async fn applications_scopes_handler(
+    Path(app_id): Path<uuid::Uuid>,
+    State(state): State<AppState>,
+    Json(body): Json<ApplicationScopesRequestBody>
+) -> Result<impl IntoResponse, AppError> {
     if body.application_scopes.is_empty()
         || body.application_scopes.iter().any(|application_scope: &ApplicationScope| { application_scope.description.is_empty() || application_scope.name.is_empty() }) {
         return Err(AppError::ValidationError("application_scopes".to_string()));
     }
 
-    let app_id = id::parse_uuid(&params.app_id)?;
-
-    let mut permission_ids = Vec::with_capacity(body.application_scopes.len());
-    let mut names = Vec::with_capacity(body.application_scopes.len());
-    let mut descriptions = Vec::with_capacity(body.application_scopes.len());
+    let scopes_len = body.application_scopes.len();
+    let mut permission_ids = Vec::with_capacity(scopes_len);
+    let mut names = Vec::with_capacity(scopes_len);
+    let mut descriptions = Vec::with_capacity(scopes_len);
 
     for scope in &body.application_scopes {
         permission_ids.push(id::new_uuid());
