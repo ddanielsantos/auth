@@ -10,6 +10,8 @@ pub enum AppError {
     HeaderNotFound,
     InvalidToken,
     ValidationError(String),
+    TimeError(std::time::SystemTimeError),
+    TokenEncodeError(jsonwebtoken::errors::Error),
 }
 
 impl IntoResponse for AppError {
@@ -26,6 +28,14 @@ impl IntoResponse for AppError {
             AppError::InvalidToken => StatusCode::UNAUTHORIZED.into_response(),
             AppError::ValidationError(field) => {
                 (StatusCode::BAD_REQUEST, format!("Validation failed for {}", field)).into_response()
+            }
+            AppError::TimeError(err) => {
+                error!("Time error: {}", err);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+            AppError::TokenEncodeError(err) => {
+                error!("Token encode error: {}", err);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
         }
     }
@@ -66,5 +76,11 @@ impl From<uuid::Error> for AppError {
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
         AppError::Sqlx(err)
+    }
+}
+
+impl From<std::time::SystemTimeError> for AppError {
+    fn from(err: std::time::SystemTimeError) -> Self {
+        AppError::TimeError(err)
     }
 }

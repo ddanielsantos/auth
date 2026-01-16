@@ -6,16 +6,24 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::{Json, Router, middleware};
 
-use crate::crypto;
 use crate::error::AppError;
 use crate::id;
+use crate::{crypto, jwt};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-async fn validate_admin_api_key(request: Request, next: Next) -> Result<Response, StatusCode> {
+async fn validate_admin_api_key(request: Request, next: Next) -> Result<Response, AppError> {
     info!("Validating admin API key");
-    let response = next.run(request).await;
-    Ok(response)
+    let header = request.headers();
+    let jwt_token = jwt::get_jwt_token(header)?;
+    let user_type = jwt::decode_token(jwt_token)?.claims.user_type;
+
+    if user_type == "admin" {
+        let response = next.run(request).await;
+        Ok(response)
+    } else {
+        Err(AppError::InvalidToken)
+    }
 }
 
 pub fn get_router() -> Router<AppState> {
@@ -26,6 +34,57 @@ pub fn get_router() -> Router<AppState> {
         .route("/applications/{app_id}/scopes", put(applications_scopes_handler))
         .route("/metrics", get(metrics_handler))
         .layer(middleware::from_fn(validate_admin_api_key))
+        .route("/register", post(register_admin_handler))
+        .route("/login", post(login_admin_handler))
+}
+
+#[derive(Deserialize)]
+struct RegisterAdminRequestBody {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize)]
+struct RegisterAdminResponse {
+    user_id: String,
+    access_token: String,
+}
+
+async fn register_admin_handler(
+    State(state): State<AppState>,
+    Json(body): Json<RegisterAdminRequestBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id = id::new_uuid();
+    let password_hash = crypto::hash_password(&body.password)?;
+
+    sqlx::query!(
+        "INSERT INTO admin_users (id, username, password_hash) VALUES ($1, $2, $3)",
+        user_id,
+        body.username,
+        password_hash,
+    )
+    .execute(&state.pool)
+    .await?;
+
+    let response = RegisterAdminResponse {
+        user_id: user_id.to_string(),
+        access_token: jwt::generate_admin_token(&user_id.to_string())?,
+    };
+
+    Ok((StatusCode::CREATED, Json(response)).into_response())
+}
+
+#[derive(Deserialize)]
+struct LoginAdminRequestBody {
+    username: String,
+    password: String,
+}
+
+async fn login_admin_handler(
+    State(state): State<AppState>,
+    Json(body): Json<LoginAdminRequestBody>,
+) -> Result<impl IntoResponse, AppError> {
+    Ok((StatusCode::OK).into_response())
 }
 
 #[derive(Debug, Deserialize)]
