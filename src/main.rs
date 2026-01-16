@@ -1,8 +1,8 @@
+use lazy_limit::{Duration, RuleConfig, init_rate_limiter};
 use router::AppState;
 use std::net::Ipv4Addr;
 use tokio::net::TcpListener;
 use tracing::{error, info};
-use lazy_limit::{init_rate_limiter, Duration, RuleConfig};
 
 mod admin;
 mod auth;
@@ -43,16 +43,21 @@ async fn main() {
             // read
             ("/api/me", RuleConfig::new(Duration::minutes(1), 100))
         ]
-    ).await;
+    )
+    .await;
 
     let state = AppState::new(pool);
     let trace_layer = config::tracing::get_trace_layer();
     let cors_layer = config::net::get_cors_layer();
-    let app_router = router::routes().with_state(state).layer(trace_layer).layer(cors_layer).layer(
-        tower::ServiceBuilder::new()
-            .layer(real::RealIpLayer::default())
-            .layer(axum_governor::GovernorLayer::default())
-    );
+    let app_router = router::routes()
+        .with_state(state)
+        .layer(trace_layer)
+        .layer(cors_layer)
+        .layer(
+            tower::ServiceBuilder::new()
+                .layer(real::RealIpLayer::default())
+                .layer(axum_governor::GovernorLayer::default()),
+        );
 
     let address = Ipv4Addr::UNSPECIFIED;
     let port = 3000;
