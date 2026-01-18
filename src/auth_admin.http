@@ -1,0 +1,9 @@
+### create admin user
+
+POST localhost:3000/admin/register
+Content-Type: application/json
+
+{
+  "username": "",
+  "password": ""
+}

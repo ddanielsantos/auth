@@ -1,9 +1,4 @@
-POST localhost:3000/admin/organizations
-Content-Type: application/json
 
-{
-  "name": "company"
-}
 
 ###
 
@@ -11,8 +6,8 @@ POST localhost:3000/admin/projects
 Content-Type: application/json
 
 {
-  "org_id": "019baa12-f1fd-7b86-830b-6de536e434c3",
-  "name": "project-1"
+  "org_id": "019bbe2a-0d7c-76d1-96ef-77abe31b0763",
+  "name": "project-3"
 }
 
 ###
@@ -21,10 +16,10 @@ POST localhost:3000/admin/applications
 Content-Type: application/json
 
 {
-  "project_id": "aaaac4f4-e41a-41ce-ba42-98f495e07de7",
-  "redirect_uris": [],
-  "org_id": "a89ade62-feb6-4ce7-8b0a-493ed26c17d9",
-  "name": "project-1"
+  "project_id": "019bbe32-9846-7fb0-a938-d277ab19a168",
+  "redirect_uris": ["my_redirect_uri_1"],
+  "org_id": "019bbe2a-0d7c-76d1-96ef-77abe31b0763",
+  "name": "application-1"
 }
 
 ###
@@ -36,6 +31,15 @@ Content-Type: application/json
   "identifier": "a@a.com",
   "method_type": "email",
   "password": "12345",
-  "client_id": "a89ade62-feb6-4ce7-8b0a-493ed26c17d9",
+  "client_id": "019bbe3b-5287-7d02-9f06-ac0ae428ca4e",
   "profile": {}
+}
+
+###
+
+PUT localhost:3000/admin/applications/a/scopes
+Content-Type: application/json
+
+{
+  "application_scopes": []
 }

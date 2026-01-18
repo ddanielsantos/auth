@@ -1,0 +1,7 @@
+### create organization
+POST localhost:3000/admin/organizations
+Content-Type: application/json
+
+{
+  "name": "company"
+}
