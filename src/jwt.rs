@@ -13,12 +13,16 @@ pub struct Claims {
     pub exp: usize,
 }
 
-pub fn get_jwt_token(header: &HeaderMap) -> Result<&str, AppError> {
-    header
+fn get_second_word(origin: &str) -> Option<&str> {
+    origin.split_whitespace().nth(1)
+}
+
+pub fn get_jwt_token(headers: &HeaderMap) -> Result<&str, AppError> {
+    headers
         .get(AUTHORIZATION)
-        .and_then(|hv| hv.to_str().ok())
-        .and_then(|s| s.split_whitespace().nth(1))
-        .ok_or(AppError::HeaderNotFound)
+        .ok_or(AppError::HeaderNotFound(AUTHORIZATION))
+        .and_then(|authorization| authorization.to_str().ok().ok_or_else(|| AppError::InvalidToken))
+        .and_then(|value| get_second_word(value).ok_or(AppError::InvalidToken))
 }
 
 pub fn decode_token(token: &str) -> Result<TokenData<Claims>, AppError> {

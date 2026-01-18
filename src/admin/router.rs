@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::router::AppState;
 use axum::extract::{Path, Request, State};
 use axum::http::StatusCode;
@@ -5,8 +6,9 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::{Json, Router, middleware};
+use validator::Validate;
 
-use crate::error::AppError;
+use crate::error::{AppError, ValidationErrors};
 use crate::id;
 use crate::{crypto, jwt};
 use serde::{Deserialize, Serialize};
@@ -38,9 +40,12 @@ pub fn get_router() -> Router<AppState> {
         .route("/login", post(login_admin_handler))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct RegisterAdminRequestBody {
+    #[validate(length(min = 6, max = 50, message = "Should have from 6 to 50 characters"))]
+    #[validate(contains(pattern = "zap", message = "zap url is required"))]
     username: String,
+    #[validate(length(min = 6, max = 50, message = "Should have from 6 to 50 characters"))]
     password: String,
 }
 
@@ -54,6 +59,8 @@ async fn register_admin_handler(
     State(state): State<AppState>,
     Json(body): Json<RegisterAdminRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
+    body.validate()?;
+
     let user_id = id::new_uuid();
     let password_hash = crypto::hash_password(&body.password)?;
 
@@ -151,7 +158,10 @@ async fn applications_handler(
     Json(body): Json<ApplicationsRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
     if body.redirect_uris.is_empty() {
-        return Err(AppError::ValidationError("redirect_uris".to_string()));
+        // TODO: move to validator crate
+        let mut errors = HashMap::new();
+        errors.insert("redirect_uris".to_string(), vec!["empty".to_string()]);
+        return Err(AppError::ValidationError(ValidationErrors::new(errors)));
     }
 
     let project_id = id::parse_uuid(&body.project_id)?;
@@ -211,7 +221,10 @@ async fn applications_scopes_handler(
                 application_scope.description.is_empty() || application_scope.name.is_empty()
             })
     {
-        return Err(AppError::ValidationError("application_scopes".to_string()));
+        // TODO: move to validator crate
+        let mut errors = HashMap::new();
+        errors.insert("application_scopes".to_string(), vec!["empty or something".to_string()]);
+        return Err(AppError::ValidationError(ValidationErrors::new(errors)));
     }
 
     let scopes_len = body.application_scopes.len();
