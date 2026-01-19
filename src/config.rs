@@ -4,6 +4,10 @@ pub mod database {
     use sqlx::pool::PoolOptions;
     use std::time::Duration;
 
+    /// Creates and returns a PostgreSQL connection pool.
+    ///
+    /// Accepts an optional database URL; if not provided, uses the DATABASE_URL environment variable.
+    /// Configures a pool with a maximum of 20 connections and a 3-second acquisition timeout.
     pub async fn get_connection_pool(database_url: Option<String>) -> Result<PgPool, sqlx::Error> {
         let uri = database_url.unwrap_or_else(get_default_database_url);
 
@@ -29,7 +33,7 @@ mod env {
     impl Env {
         pub fn new() -> Self {
             Self {
-                database_url: dotenvy::var("DATABASE_URL").expect("env: GOOGLE_TOKEN_URL must be set"),
+                database_url: dotenvy::var("DATABASE_URL").expect("env: DATABASE_URL must be set"),
             }
         }
     }
@@ -48,6 +52,11 @@ pub mod tracing {
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::util::SubscriberInitExt;
 
+    /// Initializes the tracing subscriber for structured logging.
+    ///
+    /// Sets up logging with configurable levels via the RUST_LOG environment variable,
+    /// defaulting to debug level for the application and tower_http, with trace level for axum.
+    /// Logs are formatted without timestamps.
     pub fn init_tracing() {
         tracing_subscriber::registry()
             .with(
@@ -59,6 +68,10 @@ pub mod tracing {
             .init()
     }
 
+    /// Waits for a shutdown signal (Ctrl+C or SIGTERM).
+    ///
+    /// On Unix systems, listens for both SIGINT (Ctrl+C) and SIGTERM signals.
+    /// On other systems, only responds to Ctrl+C. Blocks until one of these signals is received.
     pub async fn shutdown_signal() {
         let ctrl_c = async {
             signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
@@ -81,6 +94,10 @@ pub mod tracing {
         }
     }
 
+    /// Creates and returns a trace layer for HTTP request/response logging.
+    ///
+    /// Configures tracing with INFO level for both request spans and response events,
+    /// providing visibility into HTTP traffic through structured logging.
     pub fn get_trace_layer() -> TraceLayer<HttpMakeClassifier> {
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
@@ -94,6 +111,10 @@ pub mod net {
     use tower_http::cors;
     use tower_http::cors::{AllowHeaders, CorsLayer};
 
+    /// Creates and returns a CORS layer configured to allow cross-origin requests.
+    ///
+    /// The layer permits GET, POST, and OPTIONS HTTP methods, allows any headers,
+    /// and accepts requests from any origin.
     pub fn get_cors_layer() -> CorsLayer {
         CorsLayer::new()
             .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
@@ -101,6 +122,14 @@ pub mod net {
             .allow_origin(cors::Any)
     }
 
+    /// Initializes rate limiting rules for the application.
+    ///
+    /// Configures per-route rate limits with a default of 10 requests per minute.
+    ///
+    /// Auth endpoints allow 5 requests per 15 minutes, while read/write operations have
+    /// customized limits.
+    ///
+    /// Maximum memory usage is capped at 64 MB.
     pub async fn init_rate_limiting() {
         init_rate_limiter!(
             default: RuleConfig::new(Duration::minutes(1), 10),
