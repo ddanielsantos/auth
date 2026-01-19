@@ -1,7 +1,6 @@
 use lazy_limit::{Duration, RuleConfig, init_rate_limiter};
 use router::AppState;
 use std::net::Ipv4Addr;
-use axum::ServiceExt;
 use tokio::net::TcpListener;
 use tracing::{error, info};
 
@@ -37,7 +36,8 @@ async fn main() {
             // read
             ("/api/me", RuleConfig::new(Duration::minutes(1), 100))
         ]
-    ).await;
+    )
+    .await;
 
     let pool = match config::database::get_connection_pool(None).await {
         Ok(p) => p,
@@ -46,7 +46,6 @@ async fn main() {
             return;
         }
     };
-
 
     let state = AppState::new(pool);
     let trace_layer = config::tracing::get_trace_layer();

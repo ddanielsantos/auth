@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::router::AppState;
 use axum::extract::{Path, Request, State};
 use axum::http::StatusCode;
@@ -6,6 +5,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::{Json, Router, middleware};
+use std::collections::HashMap;
 use validator::Validate;
 
 use crate::error::{AppError, ValidationErrors};

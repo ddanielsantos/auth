@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
+use std::collections::HashMap;
 use tracing::error;
-use validator::ValidationError;
 
 pub enum AppError {
     Argon2(argon2::password_hash::Error),
@@ -44,11 +43,9 @@ impl IntoResponse for AppError {
                     _ => StatusCode::BAD_REQUEST,
                 };
                 (status_code, format!("Header not found: {}", header)).into_response()
-            },
-            AppError::InvalidToken => StatusCode::UNAUTHORIZED.into_response(),
-            AppError::ValidationError(errors) => {
-                (StatusCode::BAD_REQUEST, axum::Json(errors)).into_response()
             }
+            AppError::InvalidToken => StatusCode::UNAUTHORIZED.into_response(),
+            AppError::ValidationError(errors) => (StatusCode::BAD_REQUEST, axum::Json(errors)).into_response(),
             AppError::TimeError(err) => {
                 error!("Time error: {}", err);
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -107,16 +104,18 @@ impl From<std::time::SystemTimeError> for AppError {
 
 impl From<validator::ValidationErrors> for AppError {
     fn from(err: validator::ValidationErrors) -> Self {
-        let mut errors: HashMap<String, Vec<String>> = HashMap::new();
-
-        for (field, validators) in err.field_errors().iter() {
-            let messages: Vec<String> = validators
-                .iter()
-                .filter_map(|v| v.message.as_ref().map(|msg| msg.to_string()))
-                .collect();
-
-            errors.insert(field.to_string(), messages);
-        }
+        let errors = err
+            .field_errors()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.to_string(),
+                    v.iter()
+                        .filter_map(|val_error| val_error.message.as_ref().map(|msg| msg.to_string()))
+                        .collect(),
+                )
+            })
+            .collect();
 
         AppError::ValidationError(ValidationErrors::new(errors))
     }
