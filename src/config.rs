@@ -90,6 +90,7 @@ pub mod tracing {
 
 pub mod net {
     use axum::http::Method;
+    use lazy_limit::{Duration, RuleConfig, init_rate_limiter};
     use tower_http::cors;
     use tower_http::cors::{AllowHeaders, CorsLayer};
 
@@ -98,5 +99,28 @@ pub mod net {
             .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
             .allow_headers(AllowHeaders::any())
             .allow_origin(cors::Any)
+    }
+
+    pub async fn init_rate_limiting() {
+        init_rate_limiter!(
+            default: RuleConfig::new(Duration::minutes(1), 10),
+            max_memory: Some(64 * 1024 * 1024),
+            routes: [
+                // auth
+                ("/admin/register", RuleConfig::new(Duration::minutes(15), 5)),
+                ("/admin/login", RuleConfig::new(Duration::minutes(15), 5)),
+                ("/auth/register", RuleConfig::new(Duration::minutes(15), 5)),
+                ("/auth/login", RuleConfig::new(Duration::minutes(15), 5)),
+
+                // write
+                ("/admin/organizations", RuleConfig::new(Duration::minutes(1), 10)),
+                ("/admin/projects", RuleConfig::new(Duration::minutes(1), 10)),
+                ("/admin/applications", RuleConfig::new(Duration::minutes(1), 10)),
+
+                // read
+                ("/api/me", RuleConfig::new(Duration::minutes(1), 100))
+            ]
+        )
+        .await
     }
 }

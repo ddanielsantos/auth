@@ -1,4 +1,3 @@
-use lazy_limit::{Duration, RuleConfig, init_rate_limiter};
 use router::AppState;
 use std::net::Ipv4Addr;
 use tokio::net::TcpListener;
@@ -17,27 +16,7 @@ mod users;
 #[tokio::main]
 async fn main() {
     config::tracing::init_tracing();
-
-    init_rate_limiter!(
-        default: RuleConfig::new(Duration::minutes(1), 10),
-        max_memory: Some(64 * 1024 * 1024),
-        routes: [
-            // auth
-            ("/admin/register", RuleConfig::new(Duration::minutes(15), 5)),
-            ("/admin/login", RuleConfig::new(Duration::minutes(15), 5)),
-            ("/auth/register", RuleConfig::new(Duration::minutes(15), 5)),
-            ("/auth/login", RuleConfig::new(Duration::minutes(15), 5)),
-
-            // write
-            ("/admin/organizations", RuleConfig::new(Duration::minutes(1), 10)),
-            ("/admin/projects", RuleConfig::new(Duration::minutes(1), 10)),
-            ("/admin/applications", RuleConfig::new(Duration::minutes(1), 10)),
-
-            // read
-            ("/api/me", RuleConfig::new(Duration::minutes(1), 100))
-        ]
-    )
-    .await;
+    config::net::init_rate_limiting().await;
 
     let pool = match config::database::get_connection_pool(None).await {
         Ok(p) => p,

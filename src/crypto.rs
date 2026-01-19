@@ -29,7 +29,7 @@ pub fn verify_password(
     let argon2 = Argon2::default();
 
     match argon2.verify_password(provided_hash.as_ref(), hash) {
-        Ok(value) => Ok(true),
+        Ok(_value) => Ok(true),
         Err(err) => Err(err),
     }
 }
