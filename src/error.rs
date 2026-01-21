@@ -107,11 +107,12 @@ impl From<validator::ValidationErrors> for AppError {
         let errors = err
             .field_errors()
             .iter()
-            .map(|(k, v)| {
+            .map(|(k, &v)| {
                 (
                     k.to_string(),
                     v.iter()
-                        .filter_map(|val_error| val_error.message.as_ref().map(|msg| msg.to_string()))
+                        .filter_map(|e| e.message.as_deref())
+                        .map(String::from)
                         .collect(),
                 )
             })
