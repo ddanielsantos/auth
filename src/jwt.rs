@@ -1,4 +1,4 @@
-use crate::config::env::env;
+use crate::config;
 use crate::error::AppError;
 use axum::http::HeaderMap;
 use axum::http::header::AUTHORIZATION;
@@ -32,7 +32,7 @@ enum UserKind {
 }
 
 fn decode_token(token: &str, user_kind: UserKind) -> Result<TokenData<Claims>, AppError> {
-    let env = env();
+    let env = config::env::env();
     let secret = match user_kind {
         UserKind::Admin => &env.admin_jwt_secret,
         UserKind::User => &env.user_jwt_secret,
@@ -55,7 +55,7 @@ pub fn decode_user_token(token: &str) -> Result<TokenData<Claims>, AppError> {
 }
 
 fn generate_token(user_id: &str, user_kind: UserKind) -> Result<String, AppError> {
-    let env = env();
+    let env = config::env::env();
 
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
     let (duration, user_type, secret) = match user_kind {

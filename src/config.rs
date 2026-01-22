@@ -1,5 +1,5 @@
 pub mod database {
-    use crate::config::env::env;
+    use crate::config;
     use sqlx::PgPool;
     use sqlx::pool::PoolOptions;
     use std::time::Duration;
@@ -8,7 +8,7 @@ pub mod database {
     ///
     /// Accepts an optional database URL; if not provided, uses the DATABASE_URL environment variable.
     pub async fn get_connection_pool(database_url: Option<&str>) -> Result<PgPool, sqlx::Error> {
-        let env = env();
+        let env = config::env::env();
         let uri = database_url.unwrap_or_else(|| &env.database_url);
 
         PoolOptions::new()
@@ -82,7 +82,7 @@ pub mod tracing {
 }
 
 pub mod net {
-    use crate::config::env::env;
+    use crate::config;
     use axum::http::Method;
     use lazy_limit::{Duration, RuleConfig, init_rate_limiter};
     use tower_http::cors;
@@ -108,7 +108,7 @@ pub mod net {
     ///
     /// Maximum memory usage is capped at 64 MB.
     pub async fn init_rate_limiting() {
-        let env = env();
+        let env = config::env::env();
         init_rate_limiter!(
             default: RuleConfig::new(Duration::minutes(1), 10),
             max_memory: Some(env.rate_limiter_gc_max_memory_in_mb as usize),
