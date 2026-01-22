@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 pub struct Claims {
     pub sub: String,
     pub user_type: String,
-    pub exp: usize,
+    pub exp: u64,
 }
 
 fn get_second_word(origin: &str) -> Option<&str> {
@@ -59,19 +59,19 @@ fn generate_token(user_id: &str, user_kind: UserKind) -> Result<String, AppError
 
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
     let (duration, user_type, secret) = match user_kind {
-        UserKind::Admin => {
-            (env.admin_access_token_duration_in_minutes, "admin", &env.admin_jwt_secret)
-        },
-        UserKind::User => {
-            (env.user_access_token_duration_in_minutes, "user", &env.user_jwt_secret)
-        },
+        UserKind::Admin => (
+            env.admin_access_token_duration_in_minutes,
+            "admin",
+            &env.admin_jwt_secret,
+        ),
+        UserKind::User => (env.user_access_token_duration_in_minutes, "user", &env.user_jwt_secret),
     };
-    let expiration = now.add(Duration::from_mins(duration as u64)).as_secs();
+    let exp = now.add(Duration::from_mins(duration as u64)).as_secs();
 
     let claims = Claims {
         sub: user_id.to_string(),
         user_type: user_type.to_string(),
-        exp: expiration as usize,
+        exp,
     };
 
     encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())).map_err(AppError::TokenEncodeError)
