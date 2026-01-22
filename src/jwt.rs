@@ -1,3 +1,4 @@
+use crate::config::env::env;
 use crate::error::AppError;
 use axum::http::HeaderMap;
 use axum::http::header::AUTHORIZATION;
@@ -25,19 +26,48 @@ pub fn get_jwt_token(headers: &HeaderMap) -> Result<&str, AppError> {
         .and_then(|value| get_second_word(value).ok_or(AppError::InvalidToken))
 }
 
-pub fn decode_token(token: &str) -> Result<TokenData<Claims>, AppError> {
+enum UserKind {
+    User,
+    Admin,
+}
+
+fn decode_token(token: &str, user_kind: UserKind) -> Result<TokenData<Claims>, AppError> {
+    let env = env();
+    let secret = match user_kind {
+        UserKind::Admin => &env.admin_jwt_secret,
+        UserKind::User => &env.user_jwt_secret,
+    };
+
     decode::<Claims>(
         &token,
-        &DecodingKey::from_secret("TODO: my secret".as_ref()),
+        &DecodingKey::from_secret(secret.as_ref()),
         &Validation::new(Algorithm::HS256),
     )
     .map_err(|_| AppError::InvalidToken)
 }
 
-fn generate_token(user_id: &str, user_type: &str) -> Result<String, AppError> {
-    let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+pub fn decode_admin_token(token: &str) -> Result<TokenData<Claims>, AppError> {
+    decode_token(token, UserKind::Admin)
+}
 
-    let expiration = now.add(Duration::from_mins(15)).as_secs();
+pub fn decode_user_token(token: &str) -> Result<TokenData<Claims>, AppError> {
+    decode_token(token, UserKind::User)
+}
+
+fn generate_token(user_id: &str, user_kind: UserKind) -> Result<String, AppError> {
+    let env = env();
+
+    let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    let duration = match user_kind {
+        UserKind::Admin => env.admin_access_token_duration_in_minutes,
+        UserKind::User => env.user_access_token_duration_in_minutes,
+    } as u64;
+    let expiration = now.add(Duration::from_mins(duration)).as_secs();
+
+    let user_type = match user_kind {
+        UserKind::Admin => "admin",
+        UserKind::User => "user",
+    };
 
     let claims = Claims {
         sub: user_id.to_string(),
@@ -45,14 +75,17 @@ fn generate_token(user_id: &str, user_type: &str) -> Result<String, AppError> {
         exp: expiration as usize,
     };
 
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret("TODO: my secret".as_ref()),
-    )
-    .map_err(AppError::TokenEncodeError)
+    let secret = match user_kind {
+        UserKind::Admin => &env.admin_jwt_secret,
+        UserKind::User => &env.user_jwt_secret,
+    };
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())).map_err(AppError::TokenEncodeError)
 }
 
 pub fn generate_admin_token(user_id: &str) -> Result<String, AppError> {
-    generate_token(user_id, "admin")
+    generate_token(user_id, UserKind::Admin)
+}
+
+pub fn generate_user_token(user_id: &str) -> Result<String, AppError> {
+    generate_token(user_id, UserKind::User)
 }

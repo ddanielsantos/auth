@@ -1,5 +1,5 @@
 pub mod database {
-    use crate::config::env::Env;
+    use crate::config::env::env;
     use sqlx::PgPool;
     use sqlx::pool::PoolOptions;
     use std::time::Duration;
@@ -7,25 +7,19 @@ pub mod database {
     /// Creates and returns a PostgreSQL connection pool.
     ///
     /// Accepts an optional database URL; if not provided, uses the DATABASE_URL environment variable.
-    /// Configures a pool with a maximum of 20 connections and a 3-second acquisition timeout.
-    pub async fn get_connection_pool(database_url: Option<String>) -> Result<PgPool, sqlx::Error> {
-        let uri = database_url.unwrap_or_else(get_default_database_url);
+    pub async fn get_connection_pool(database_url: Option<&str>) -> Result<PgPool, sqlx::Error> {
+        let env = env();
+        let uri = database_url.unwrap_or_else(|| &env.database_url);
 
         PoolOptions::new()
-            .max_connections(20)
-            .acquire_timeout(Duration::from_secs(3))
-            .connect(uri.as_str())
+            .max_connections(env.postgres_max_connections as u32)
+            .acquire_timeout(Duration::from_secs(env.postgres_acquire_timeout_in_secs as u64))
+            .connect(uri)
             .await
-    }
-
-    fn get_default_database_url() -> String {
-        let Env { database_url, .. } = Env::new();
-
-        database_url
     }
 }
 
-mod env;
+pub mod env;
 
 pub mod tracing {
     use tokio::signal;
@@ -88,6 +82,7 @@ pub mod tracing {
 }
 
 pub mod net {
+    use crate::config::env::env;
     use axum::http::Method;
     use lazy_limit::{Duration, RuleConfig, init_rate_limiter};
     use tower_http::cors;
@@ -113,9 +108,10 @@ pub mod net {
     ///
     /// Maximum memory usage is capped at 64 MB.
     pub async fn init_rate_limiting() {
+        let env = env();
         init_rate_limiter!(
             default: RuleConfig::new(Duration::minutes(1), 10),
-            max_memory: Some(64 * 1024 * 1024),
+            max_memory: Some(env.rate_limiter_gc_max_memory_in_mb as usize),
             routes: [
                 // auth
                 ("/admin/register", RuleConfig::new(Duration::minutes(15), 5)),

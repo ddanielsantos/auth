@@ -11,7 +11,7 @@ pub async fn validate_admin_api_key_middleware(request: Request, next: Next) -> 
     info!("Validating admin API key");
     let header = request.headers();
     let jwt_token = jwt::get_jwt_token(header)?;
-    let user_type = jwt::decode_token(jwt_token)?.claims.user_type;
+    let user_type = jwt::decode_admin_token(jwt_token)?.claims.user_type;
 
     if user_type == "admin" {
         let response = next.run(request).await;

@@ -82,7 +82,7 @@ struct MeResponse {
 
 async fn me_handler(header: HeaderMap, State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let jwt = jwt::get_jwt_token(&header)?;
-    let sub = jwt::decode_token(jwt)?.claims.sub;
+    let sub = jwt::decode_admin_token(jwt)?.claims.sub;
 
     let user_id = id::parse_uuid(&sub)?;
     let user_data = sqlx::query!(
