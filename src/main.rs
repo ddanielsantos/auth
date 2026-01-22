@@ -11,7 +11,6 @@ mod error;
 mod id;
 mod jwt;
 mod router;
-mod users;
 
 #[tokio::main]
 async fn main() {
