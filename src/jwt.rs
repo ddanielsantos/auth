@@ -58,16 +58,15 @@ fn generate_token(user_id: &str, user_kind: UserKind) -> Result<String, AppError
     let env = env();
 
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
-    let duration = match user_kind {
-        UserKind::Admin => env.admin_access_token_duration_in_minutes,
-        UserKind::User => env.user_access_token_duration_in_minutes,
-    } as u64;
-    let expiration = now.add(Duration::from_mins(duration)).as_secs();
-
-    let user_type = match user_kind {
-        UserKind::Admin => "admin",
-        UserKind::User => "user",
+    let (duration, user_type, secret) = match user_kind {
+        UserKind::Admin => {
+            (env.admin_access_token_duration_in_minutes, "admin", &env.admin_jwt_secret)
+        },
+        UserKind::User => {
+            (env.user_access_token_duration_in_minutes, "user", &env.user_jwt_secret)
+        },
     };
+    let expiration = now.add(Duration::from_mins(duration as u64)).as_secs();
 
     let claims = Claims {
         sub: user_id.to_string(),
@@ -75,10 +74,6 @@ fn generate_token(user_id: &str, user_kind: UserKind) -> Result<String, AppError
         exp: expiration as usize,
     };
 
-    let secret = match user_kind {
-        UserKind::Admin => &env.admin_jwt_secret,
-        UserKind::User => &env.user_jwt_secret,
-    };
     encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())).map_err(AppError::TokenEncodeError)
 }
 
