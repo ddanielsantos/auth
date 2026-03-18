@@ -1,6 +1,7 @@
+use crate::error::AppError;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
-use argon2::{Argon2, PasswordHasher, PasswordVerifier};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand::Rng;
 use rand::distr::Alphanumeric;
 
@@ -21,15 +22,10 @@ pub fn generate_client_secret() -> String {
         .collect()
 }
 
-pub fn verify_password(
-    password: &str,
-    hash: &argon2::password_hash::PasswordHash,
-) -> Result<bool, argon2::password_hash::Error> {
-    let provided_hash = hash_password(password)?;
-    let argon2 = Argon2::default();
+pub fn verify_password(provided_pass: &str, stored_pass: &str) -> Result<(), AppError> {
+    let stored_hash = PasswordHash::new(stored_pass)?;
 
-    match argon2.verify_password(provided_hash.as_ref(), hash) {
-        Ok(_value) => Ok(true),
-        Err(err) => Err(err),
-    }
+    Argon2::default()
+        .verify_password(provided_pass.as_bytes(), &stored_hash)
+        .map_err(AppError::Argon2)
 }
