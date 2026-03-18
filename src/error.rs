@@ -25,6 +25,12 @@ impl ValidationErrors {
     pub fn new(errors: HashMap<String, Vec<String>>) -> Self {
         ValidationErrors { errors }
     }
+
+    pub fn single_error(error: String) -> Self {
+        let mut errors: HashMap<String, Vec<String>> = HashMap::new();
+        errors.insert("error".to_string(), vec![error]);
+        Self::new(errors)
+    }
 }
 
 impl IntoResponse for AppError {
