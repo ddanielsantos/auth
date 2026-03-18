@@ -6,6 +6,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 use validator::Validate;
 
 #[derive(Deserialize, Validate)]
@@ -48,15 +49,37 @@ pub async fn register_admin_handler(
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct LoginAdminRequestBody {
+    #[validate(length(min = 6, max = 50, message = "Should have from 6 to 50 characters"))]
     username: String,
+    #[validate(length(min = 6, max = 50, message = "Should have from 6 to 50 characters"))]
     password: String,
 }
 
+#[derive(Serialize)]
+struct LoginAdminResponse {
+    access_token: String,
+}
+
 pub async fn login_admin_handler(
-    State(_state): State<AppState>,
-    Json(_body): Json<LoginAdminRequestBody>,
+    State(state): State<AppState>,
+    Json(body): Json<LoginAdminRequestBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    Ok((StatusCode::OK).into_response())
+    body.validate()?;
+
+    let record = sqlx::query!(
+        "SELECT username, password_hash, id FROM admin_users WHERE username = $1",
+        body.username
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    crypto::verify_password(body.password.as_ref(), record.password_hash.as_ref())
+        .inspect_err(|_| error!("Invalid hash password for admin user {}", body.username))?;
+
+    let access_token = jwt::generate_admin_token(record.id.to_string().as_ref())?;
+    let response = LoginAdminResponse { access_token };
+
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
