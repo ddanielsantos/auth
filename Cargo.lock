@@ -2033,6 +2033,7 @@ dependencies = [
  "axum",
  "axum-governor",
  "dotenvy",
+ "http-body-util",
  "jsonwebtoken",
  "lazy-limit",
  "rand 0.9.2",
