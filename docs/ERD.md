@@ -8,6 +8,13 @@ erDiagram
     APPLICATIONS ||--o{ PERMISSIONS : "define"
     USER_ACCOUNTS ||--o{ ACCOUNT_SCOPES : "possui"
     PERMISSIONS ||--o{ ACCOUNT_SCOPES : "atribuída a"
+    ADMIN_USERS ||--o{ ADMIN_ORG_MEMBERSHIPS : "participa"
+    ORGANIZATIONS ||--o{ ADMIN_ORG_MEMBERSHIPS : "tem membros"
+    ADMIN_USERS ||--o{ ADMIN_PROJECT_MEMBERSHIPS : "participa"
+    PROJECTS ||--o{ ADMIN_PROJECT_MEMBERSHIPS : "tem membros"
+    ADMIN_USERS ||--o{ ADMIN_INVITES : "envia"
+    ORGANIZATIONS ||--o{ ADMIN_INVITES : "escopo"
+    PROJECTS ||--o{ ADMIN_INVITES : "escopo"
 
     IDENTITIES {
         uuid id PK
@@ -62,5 +69,39 @@ erDiagram
     ACCOUNT_SCOPES {
         uuid account_id FK
         uuid permission_id FK
+    }
+
+    ADMIN_USERS {
+        uuid id PK
+        string username UK
+        string password_hash
+    }
+
+    ADMIN_ORG_MEMBERSHIPS {
+        uuid id PK
+        uuid admin_user_id FK
+        uuid org_id FK
+        string role "owner|admin"
+        timestamp created_at
+    }
+
+    ADMIN_PROJECT_MEMBERSHIPS {
+        uuid id PK
+        uuid admin_user_id FK
+        uuid project_id FK
+        string role "owner|admin"
+        timestamp created_at
+    }
+
+    ADMIN_INVITES {
+        uuid id PK
+        uuid invited_by_admin_user_id FK
+        uuid org_id FK "nullable, exclusivo com project_id"
+        uuid project_id FK "nullable, exclusivo com org_id"
+        string invitee_username
+        string role "owner|admin"
+        string status "pending|accepted|declined|expired|revoked"
+        timestamp expires_at
+        timestamp responded_at
     }
 ```
