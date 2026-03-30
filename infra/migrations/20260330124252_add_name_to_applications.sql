@@ -1,0 +1,2 @@
+ALTER TABLE applications ADD COLUMN name text NOT NULL DEFAULT '';
+ALTER TABLE applications ALTER COLUMN name DROP DEFAULT;

@@ -10,6 +10,8 @@ mod crypto;
 mod error;
 mod id;
 mod jwt;
+mod openapi;
+mod pagination;
 mod router;
 
 #[tokio::main]

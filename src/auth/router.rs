@@ -5,32 +5,46 @@ use crate::{crypto, id};
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
-#[derive(Debug, Deserialize)]
-struct LoginRequestBody {
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct LoginRequestBody {
     email: String,
     password: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct RegisterRequestBody {
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct RegisterRequestBody {
     identifier: String,
     method_type: String,
     password: String,
     client_id: String,
+    #[schema(value_type = Object)]
     profile: serde_json::Value,
 }
 
-pub fn get_router() -> Router<AppState> {
-    Router::new()
-        .route("/me", get(me_handler))
-        .route("/login", post(login_handler))
-        .route("/register", post(register_handler))
+pub fn get_router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(me_handler))
+        .routes(routes!(login_handler))
+        .routes(routes!(register_handler))
 }
 
+#[utoipa::path(
+    post,
+    path = "/register",
+    tag = "auth",
+    request_body = RegisterRequestBody,
+    responses(
+        (status = 201, description = "User registered successfully"),
+        (status = 400, description = "Validation error or bad request"),
+        (status = 409, description = "User already exists"),
+    )
+)]
 async fn register_handler(
     State(state): State<AppState>,
     Json(body): Json<RegisterRequestBody>,
@@ -72,14 +86,25 @@ async fn register_handler(
     Ok(StatusCode::CREATED)
 }
 
-#[derive(Debug, Serialize)]
-struct MeResponse {
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MeResponse {
     identity_id: String,
     account_id: String,
     identifier: String,
+    #[schema(value_type = Option<Object>)]
     profile: Option<serde_json::Value>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/me",
+    tag = "auth",
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "Current user info", body = MeResponse),
+        (status = 401, description = "Unauthorized"),
+    )
+)]
 async fn me_handler(header: HeaderMap, State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let jwt = jwt::get_jwt_token(&header)?;
     let sub = jwt::decode_admin_token(jwt)?.claims.sub;
@@ -110,4 +135,13 @@ async fn me_handler(header: HeaderMap, State(state): State<AppState>) -> Result<
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/login",
+    tag = "auth",
+    request_body = LoginRequestBody,
+    responses(
+        (status = 200, description = "Login successful"),
+    )
+)]
 async fn login_handler(Json(_body): Json<LoginRequestBody>) -> impl IntoResponse {}

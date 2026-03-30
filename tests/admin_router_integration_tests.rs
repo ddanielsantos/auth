@@ -120,10 +120,11 @@ async fn insert_application(pool: &PgPool, project_id: uuid::Uuid) -> uuid::Uuid
     let client_secret_hash = study_auth::crypto::hash_password("existing-secret").unwrap();
 
     sqlx::query(
-        "INSERT INTO applications (id, project_id, client_id, client_secret_hash, redirect_uris) VALUES ($1, $2, $3, $4, $5)",
+        "INSERT INTO applications (id, project_id, name, client_id, client_secret_hash, redirect_uris) VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(application_id)
     .bind(project_id)
+    .bind("Test Application")
     .bind(client_id)
     .bind(client_secret_hash)
     .bind(vec!["https://example.com/callback"])
@@ -132,6 +133,43 @@ async fn insert_application(pool: &PgPool, project_id: uuid::Uuid) -> uuid::Uuid
     .unwrap();
 
     application_id
+}
+
+async fn insert_auth_event(pool: &PgPool, success: bool, hours_ago: i32) {
+    sqlx::query(
+        "INSERT INTO auth_events (id, event_type, success, route, occurred_at) VALUES ($1, $2, $3, $4, NOW() - ($5::int * INTERVAL '1 hour'))",
+    )
+    .bind(study_auth::id::new_uuid())
+    .bind("admin_login")
+    .bind(success)
+    .bind("/admin/login")
+    .bind(hours_ago)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+async fn insert_auth_event_with_details(
+    pool: &PgPool,
+    event_type: &str,
+    route: &str,
+    identifier: Option<&str>,
+    application_id: Option<uuid::Uuid>,
+    application_name: Option<&str>,
+) {
+    sqlx::query(
+        "INSERT INTO auth_events (id, event_type, success, route, identifier, application_id, application_name, occurred_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())",
+    )
+    .bind(study_auth::id::new_uuid())
+    .bind(event_type)
+    .bind(true)
+    .bind(route)
+    .bind(identifier)
+    .bind(application_id)
+    .bind(application_name)
+    .execute(pool)
+    .await
+    .unwrap();
 }
 
 #[sqlx::test(migrations = "infra/migrations")]
@@ -331,6 +369,7 @@ async fn applications_endpoint_validates_redirect_uris(pool: PgPool) -> Result<(
             "/admin/applications",
             json!({
                 "project_id": project_id,
+                "name": "Test App",
                 "redirect_uris": []
             }),
             &token,
@@ -360,6 +399,7 @@ async fn applications_endpoint_creates_application_and_stores_hashed_secret(
             "/admin/applications",
             json!({
                 "project_id": project_id,
+                "name": "My App",
                 "redirect_uris": ["https://example.com/callback", "https://example.com/return"]
             }),
             &token,
@@ -453,12 +493,103 @@ async fn application_scopes_endpoint_inserts_and_updates_permissions(
 async fn metrics_endpoint_accepts_valid_admin_token(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
     init_test_env();
     let token = admin_token(study_auth::id::new_uuid());
+    let org_id = insert_organization(&pool, "Acme").await;
+    let project_id = insert_project(&pool, org_id, "Project X").await;
+    insert_application(&pool, project_id).await;
+    insert_application(&pool, project_id).await;
 
     let response = test_app(pool)
         .oneshot(auth_request("GET", "/admin/metrics", &token))
         .await?;
 
-    assert_eq!(response.status(), StatusCode::CREATED);
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = json_body(response).await;
+    assert_eq!(body["total_requests_24h"], 0);
+    assert_eq!(body["active_applications"], 2);
+    assert_eq!(body["failed_attempts_24h"], 0);
+    assert_eq!(body["uptime_percentage"], 100.0);
 
     Ok(())
 }
+
+#[sqlx::test(migrations = "infra/migrations")]
+async fn metrics_endpoint_counts_events_only_within_last_24h(
+    pool: PgPool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    init_test_env();
+    let token = admin_token(study_auth::id::new_uuid());
+
+    insert_auth_event(&pool, true, 1).await;
+    insert_auth_event(&pool, false, 2).await;
+    insert_auth_event(&pool, false, 26).await;
+
+    let response = test_app(pool)
+        .oneshot(auth_request("GET", "/admin/metrics", &token))
+        .await?;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = json_body(response).await;
+    assert_eq!(body["total_requests_24h"], 2);
+    assert_eq!(body["failed_attempts_24h"], 1);
+
+    Ok(())
+}
+
+#[sqlx::test(migrations = "infra/migrations")]
+async fn logs_endpoint_returns_paginated_admin_logs(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    init_test_env();
+    let token = admin_token(study_auth::id::new_uuid());
+    let org_id = insert_organization(&pool, "Acme").await;
+    let project_id = insert_project(&pool, org_id, "Project X").await;
+    let application_id = insert_application(&pool, project_id).await;
+
+    insert_auth_event_with_details(
+        &pool,
+        "admin_login",
+        "/admin/login",
+        Some("admin-1"),
+        Some(application_id),
+        Some("Test Application"),
+    )
+    .await;
+    insert_auth_event_with_details(
+        &pool,
+        "admin_register",
+        "/admin/register",
+        Some("admin-2"),
+        None,
+        None,
+    )
+    .await;
+
+    // First page: limit=1, no cursor — should return 1 item and a next_cursor.
+    let response = test_app(pool.clone())
+        .oneshot(auth_request("GET", "/admin/logs?limit=1", &token))
+        .await?;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = json_body(response).await;
+    assert_eq!(body["items"].as_array().unwrap().len(), 1);
+    assert!(body["items"][0]["id"].as_str().is_some());
+    assert!(body["items"][0]["occurred_at"].as_str().is_some());
+
+    let next_cursor = body["next_cursor"].as_str().expect("next_cursor should be present on first page");
+
+    // Second page: use the cursor from the first page — should return 1 item and no next_cursor.
+    let url = format!("/admin/logs?limit=1&cursor={}", next_cursor);
+    let response = test_app(pool)
+        .oneshot(auth_request("GET", &url, &token))
+        .await?;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = json_body(response).await;
+    assert_eq!(body["items"].as_array().unwrap().len(), 1);
+    assert!(body["next_cursor"].is_null(), "next_cursor should be null on the last page");
+
+    Ok(())
+}
+

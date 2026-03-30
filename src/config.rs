@@ -125,7 +125,9 @@ pub mod net {
                 ("/admin/applications", RuleConfig::new(Duration::minutes(1), 10)),
 
                 // read
-                ("/api/me", RuleConfig::new(Duration::minutes(1), 100))
+                ("/api/me", RuleConfig::new(Duration::minutes(1), 100)),
+                ("/admin/metrics", RuleConfig::new(Duration::minutes(1), 100)),
+                ("/admin/logs", RuleConfig::new(Duration::minutes(1), 100))
             ]
         )
         .await

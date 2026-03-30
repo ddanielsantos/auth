@@ -5,4 +5,6 @@ pub mod crypto;
 pub mod error;
 pub mod id;
 pub mod jwt;
+pub mod openapi;
+pub mod pagination;
 pub mod router;

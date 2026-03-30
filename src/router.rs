@@ -1,7 +1,11 @@
 use crate::admin;
 use crate::auth;
+use crate::openapi::ApiDoc;
 use axum::Router;
 use sqlx::{Pool, Postgres};
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -15,8 +19,10 @@ impl AppState {
 }
 
 pub fn routes() -> Router<AppState> {
-    let admin_router = admin::router::get_router();
-    let auth_router = auth::router::get_router();
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .nest("/admin", admin::router::get_router())
+        .nest("/auth", auth::router::get_router())
+        .split_for_parts();
 
-    Router::new().nest("/admin", admin_router).nest("/auth", auth_router)
+    router.merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", api))
 }
