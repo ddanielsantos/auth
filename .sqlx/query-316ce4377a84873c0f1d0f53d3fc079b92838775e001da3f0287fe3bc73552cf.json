@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*)::bigint AS failed_attempts_24h\n            FROM auth_events ae\n            JOIN applications a ON ae.application_id = a.id\n            JOIN projects p ON a.project_id = p.id\n            WHERE p.org_id = $1\n              AND ae.occurred_at >= NOW() - INTERVAL '24 hours'\n              AND ae.success = false\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "failed_attempts_24h",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "316ce4377a84873c0f1d0f53d3fc079b92838775e001da3f0287fe3bc73552cf"
+}

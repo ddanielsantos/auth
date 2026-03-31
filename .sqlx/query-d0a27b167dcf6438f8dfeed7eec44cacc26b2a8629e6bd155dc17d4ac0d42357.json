@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT DISTINCT au.id, au.username\n            FROM admin_users au\n            JOIN admin_org_memberships m2 ON au.id = m2.admin_user_id\n            JOIN admin_org_memberships m1 ON m2.org_id = m1.org_id\n            WHERE m1.admin_user_id = $1\n            ORDER BY au.username\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d0a27b167dcf6438f8dfeed7eec44cacc26b2a8629e6bd155dc17d4ac0d42357"
+}

@@ -103,9 +103,7 @@ pub mod net {
     ///
     /// Configures per-route rate limits with a default of 10 requests per minute.
     ///
-    /// Auth endpoints allow 5 requests per 15 minutes, while read/write operations have
-    /// customized limits.
-    ///
+    /// Auth endpoints allow 5 requests per 15 minutes.
     /// Maximum memory usage is capped at 64 MB.
     pub async fn init_rate_limiting() {
         let env = config::env::env();
@@ -119,15 +117,11 @@ pub mod net {
                 ("/auth/register", RuleConfig::new(Duration::minutes(15), 5)),
                 ("/auth/login", RuleConfig::new(Duration::minutes(15), 5)),
 
-                // write
-                ("/admin/organizations", RuleConfig::new(Duration::minutes(1), 10)),
-                ("/admin/projects", RuleConfig::new(Duration::minutes(1), 10)),
-                ("/admin/applications", RuleConfig::new(Duration::minutes(1), 10)),
+                // identity
+                ("/admin/me", RuleConfig::new(Duration::minutes(1), 60)),
 
-                // read
-                ("/api/me", RuleConfig::new(Duration::minutes(1), 100)),
-                ("/admin/metrics", RuleConfig::new(Duration::minutes(1), 100)),
-                ("/admin/logs", RuleConfig::new(Duration::minutes(1), 100))
+                // write — org/project/application creation
+                ("/admin/orgs", RuleConfig::new(Duration::minutes(1), 10))
             ]
         )
         .await

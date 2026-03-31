@@ -1,23 +1,28 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO organizations (name, id) VALUES ($1, $2) RETURNING id",
+  "query": "SELECT id, name FROM organizations WHERE id = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
         "name": "id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
       "Left": [
-        "Varchar",
         "Uuid"
       ]
     },
     "nullable": [
+      false,
       false
     ]
   },
-  "hash": "cc8e91a6b5baa876e042c0089ef80f1a04d444c6f17c485f16d3569b36c286d4"
+  "hash": "136e19bc1b882c28eedb4c3b976a81b157ec1fec65ffaffb02d43b843004a134"
 }
