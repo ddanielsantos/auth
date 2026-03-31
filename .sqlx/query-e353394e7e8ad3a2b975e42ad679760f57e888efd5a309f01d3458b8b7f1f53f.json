@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*)::bigint AS total_requests_24h\n            FROM auth_events ae\n            JOIN applications a ON ae.application_id = a.id\n            JOIN projects p ON a.project_id = p.id\n            WHERE p.org_id = $1\n              AND ae.occurred_at >= NOW() - INTERVAL '24 hours'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total_requests_24h",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e353394e7e8ad3a2b975e42ad679760f57e888efd5a309f01d3458b8b7f1f53f"
+}

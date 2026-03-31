@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    id,\n                    event_type,\n                    identifier,\n                    application_id,\n                    application_name,\n                    ip_address,\n                    occurred_at\n                FROM auth_events\n                ORDER BY occurred_at DESC, id DESC\n                LIMIT $1\n            ",
+  "query": "\n                SELECT ae.id, ae.event_type, ae.identifier, ae.application_id,\n                       ae.application_name, ae.ip_address, ae.occurred_at\n                FROM auth_events ae\n                JOIN applications a ON ae.application_id = a.id\n                JOIN projects p ON a.project_id = p.id\n                WHERE p.org_id = $1\n                ORDER BY ae.occurred_at DESC, ae.id DESC\n                LIMIT $2\n            ",
   "describe": {
     "columns": [
       {
@@ -41,6 +41,7 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Int8"
       ]
     },
@@ -54,5 +55,5 @@
       false
     ]
   },
-  "hash": "f690e35da97ac6a6e4ff427fcc497546d9a9b0991fc7d3e2b9d86be23b342a92"
+  "hash": "536e430865850de7e6a3873ef946d46f8c971759090d0840d37cd630d4fe4cb3"
 }

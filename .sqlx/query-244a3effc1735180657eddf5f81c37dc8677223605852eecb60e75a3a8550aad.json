@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    id,\n                    event_type,\n                    identifier,\n                    application_id,\n                    application_name,\n                    ip_address,\n                    occurred_at\n                FROM auth_events\n                WHERE (occurred_at, id) < ($1, $2)\n                ORDER BY occurred_at DESC, id DESC\n                LIMIT $3\n            ",
+  "query": "\n                SELECT ae.id, ae.event_type, ae.identifier, ae.application_id,\n                       ae.application_name, ae.ip_address, ae.occurred_at\n                FROM auth_events ae\n                JOIN applications a ON ae.application_id = a.id\n                JOIN projects p ON a.project_id = p.id\n                WHERE p.org_id = $1\n                  AND (ae.occurred_at, ae.id) < ($2, $3)\n                ORDER BY ae.occurred_at DESC, ae.id DESC\n                LIMIT $4\n            ",
   "describe": {
     "columns": [
       {
@@ -41,6 +41,7 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Timestamptz",
         "Uuid",
         "Int8"
@@ -56,5 +57,5 @@
       false
     ]
   },
-  "hash": "da91f20041ebfb31cbcb5d4fb917fa9289ed4aac1ac238fd6950d38459235458"
+  "hash": "244a3effc1735180657eddf5f81c37dc8677223605852eecb60e75a3a8550aad"
 }

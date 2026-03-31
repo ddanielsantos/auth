@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO admin_project_memberships (id, admin_user_id, project_id, role) VALUES ($1, $2, $3, 'owner')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a3ecc35e3899e85f362d516d31688248ab6a30bf693b179a8ba329271542734d"
+}

@@ -11,6 +11,7 @@ pub enum AppError {
     InvalidUUIDVersion,
     HeaderNotFound(axum::http::header::HeaderName),
     InvalidToken,
+    Forbidden,
     InvalidCursor,
     ValidationError(ValidationErrors),
     TimeError(std::time::SystemTimeError),
@@ -52,6 +53,7 @@ impl IntoResponse for AppError {
                 (status_code, format!("Header not found: {}", header)).into_response()
             }
             AppError::InvalidToken => StatusCode::UNAUTHORIZED.into_response(),
+            AppError::Forbidden => StatusCode::FORBIDDEN.into_response(),
             AppError::InvalidCursor => (StatusCode::BAD_REQUEST, "Invalid pagination cursor").into_response(),
             AppError::ValidationError(errors) => (StatusCode::BAD_REQUEST, axum::Json(errors)).into_response(),
             AppError::TimeError(err) => {
