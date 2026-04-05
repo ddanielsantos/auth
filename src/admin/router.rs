@@ -92,6 +92,12 @@ pub struct ProjectResponse {
     shared_identity_context: bool,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct CreateProjectResponse {
+    id: String,
+    name: String,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct CreateProjectRequestBody {
     name: String,
@@ -347,7 +353,7 @@ async fn get_org_handler(
     params(("org_id" = String, Path, description = "Organization ID (UUID v7)")),
     request_body = CreateProjectRequestBody,
     responses(
-        (status = 201, description = "Project created; returns its UUID"),
+        (status = 201, description = "Project created", body = CreateProjectResponse),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
     )
@@ -383,7 +389,13 @@ async fn create_project_handler(
 
     tx.commit().await?;
 
-    Ok((StatusCode::CREATED, project_id.to_string()).into_response())
+    Ok((
+        StatusCode::CREATED,
+        Json(CreateProjectResponse {
+            id: project_id.to_string(),
+            name: body.name,
+        }),
+    ))
 }
 
 #[utoipa::path(
